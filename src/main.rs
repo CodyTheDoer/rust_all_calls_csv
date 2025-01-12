@@ -50,6 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let path = entry.path();
         if path.extension().and_then(|f| f.to_str()) == Some("rs") {
+            println!("Processing .rs file: {}", path.display());
             match process_file(path) {
                 Ok(file_items) => {
                     new_entries.extend(file_items);
