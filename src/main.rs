@@ -12,6 +12,7 @@ use syn::{
     Type,
 };
 use walkdir::WalkDir;
+use std::cmp::Ordering;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Ensure the spreadsheets folder exists
@@ -22,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut existing_entries = HashSet::new();
 
     if Path::new(&spreadsheet_path).exists() {
+        println!("Reading existing CSV: {}", spreadsheet_path);
         let file = File::open(&spreadsheet_path)?;
         let mut rdr = ReaderBuilder::new()
             .has_headers(true)
@@ -36,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 record[2].to_string(),
             ));
         }
-        println!("CSV exists. Read {} existing entries.", existing_entries.len());
+        println!("Loaded {} existing entries.", existing_entries.len());
     } else {
         println!("No existing CSV found; starting fresh.");
     }
@@ -78,8 +80,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         existing_entries.insert(entry);
     }
 
-    // 6. Write out the merged data (overwriting the old CSV)
-    for (file, item_type, name) in &existing_entries {
+    // 6. Convert the set into a Vec, then sort before writing out.
+    // We want:
+    //    - Primary sort: file (alphabetically)
+    //    - Secondary sort: name (alphabetically)
+    // (We could also do a triple-level sort if you wish to sort by item_type as well.)
+    let mut sorted_entries: Vec<_> = existing_entries.into_iter().collect();
+
+    sorted_entries.sort_by(|(file_a, _ty_a, name_a), (file_b, _ty_b, name_b)| {
+        // Compare by file first
+        match file_a.cmp(file_b) {
+            Ordering::Equal => {
+                // If the files are the same, compare by name
+                name_a.cmp(name_b)
+            }
+            other => other,
+        }
+    });
+
+    // 7. Write out the sorted data (overwriting the old CSV)
+    for (file, item_type, name) in &sorted_entries {
         writer.write_record(&[file, item_type, name])?;
     }
 
