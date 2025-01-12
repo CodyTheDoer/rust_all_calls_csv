@@ -5,29 +5,33 @@ use syn::{File, Item};
 use csv::Writer;
 
 fn main() {
-    println!("ALL_CALLS_CSV -> Running build.rs");
-
-    let out_dir = std::env::var("OUT_DIR").unwrap();
-    let spreadsheet_dir = format!("{}/spreadsheets", out_dir);
+    println!("all_calls_csv CLI -> generating CSV of calls in local .rs files");
+    
+    let spreadsheet_dir = "./spreadsheets";
     let spreadsheet_path = format!("{}/project_references.csv", spreadsheet_dir);
 
     // Ensure the directory exists
-
     fs::create_dir_all(&spreadsheet_dir).expect("Failed to create spreadsheets directory");
-
+    
     // Open CSV writer
-    let mut writer = Writer::from_path(&spreadsheet_path).unwrap();
-    writer.write_record(&["File", "Item Type", "Name"]).unwrap();
+    let mut writer = Writer::from_path(&spreadsheet_path)
+        .expect("Failed to open CSV writer");
+    writer.write_record(&["File", "Item Type", "Name"])
+        .expect("Failed to write CSV header");
 
     // Traverse and process `.rs` files
     for entry in WalkDir::new(".").into_iter().filter_map(Result::ok) {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-            process_file(path, &mut writer).unwrap();
+            if let Err(e) = process_file(path, &mut writer) {
+                eprintln!("Error processing file {:?}: {:?}", path, e);
+            }
         }
     }
-
-    writer.flush().unwrap();
+    
+    writer.flush().expect("Failed to flush CSV writer");
+    println!("Done! CSV file generated at: {}", spreadsheet_path);
+    
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=build.rs");
 }

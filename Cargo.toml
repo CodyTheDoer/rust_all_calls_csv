@@ -8,7 +8,6 @@ walkdir = "2.4.0"
 syn = { version = "2.0", features = ["full"] }
 csv = "1.1"
 
-[build-dependencies]
-walkdir = "2.4.0"
-syn = { version = "2.0", features = ["full"] }
-csv = "1.1"
+[[bin]]
+name = "all_calls_csv"
+path = "src/main.rs"
