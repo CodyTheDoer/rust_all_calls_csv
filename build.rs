@@ -36,13 +36,25 @@ fn process_file(path: &Path, writer: &mut Writer<std::fs::File>) -> Result<(), B
     for item in syntax.items {
         match item {
             Item::Fn(func) => {
-                writer.write_record(&[path.to_string_lossy(), "Function", func.sig.ident.to_string()])?;
+                writer.write_record(&[
+                    path.to_string_lossy().to_string(),
+                    "Function".to_string(),
+                    func.sig.ident.to_string(),
+                ])?;
             }
             Item::Enum(en) => {
-                writer.write_record(&[path.to_string_lossy(), "Enum", en.ident.to_string()])?;
+                writer.write_record(&[
+                    path.to_string_lossy().to_string(),
+                    "Enum".to_string(),
+                    en.ident.to_string(),
+                ])?;
             }
             Item::Struct(st) => {
-                writer.write_record(&[path.to_string_lossy(), "Struct", st.ident.to_string()])?;
+                writer.write_record(&[
+                    path.to_string_lossy().to_string(),
+                    "Struct".to_string(),
+                    st.ident.to_string(),
+                ])?;
             }
             _ => {}
         }
