@@ -19,8 +19,14 @@ fn main() {
     writer.write_record(&["File", "Item Type", "Name"])
         .expect("Failed to write CSV header");
 
-    // Traverse and process `.rs` files
-    for entry in WalkDir::new(".").into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(".")
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            // Exclude `target` and possibly other directories
+            !e.path().starts_with("./target")
+        })
+    {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) == Some("rs") {
             if let Err(e) = process_file(path, &mut writer) {
