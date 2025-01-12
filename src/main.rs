@@ -4,7 +4,13 @@ use std::fs::File;
 use std::path::Path;
 
 use csv::{Writer, ReaderBuilder};
-use syn::{File as SynFile, Item};
+use syn::{
+    File as SynFile, 
+    ImplItem,
+    Item,
+    TraitItem,
+    Type,
+};
 use walkdir::WalkDir;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,6 +36,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 record[2].to_string(),
             ));
         }
+        println!("CSV exists. Read {} existing entries.", existing_entries.len());
+    } else {
+        println!("No existing CSV found; starting fresh.");
     }
 
     // 3. Build the CSV writer
@@ -51,14 +60,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let path = entry.path();
         if path.extension().and_then(|f| f.to_str()) == Some("rs") {
             println!("Processing .rs file: {}", path.display());
+            
             match process_file(path) {
                 Ok(file_items) => {
+                    println!("  Found {} items in {}", file_items.len(), path.display());
                     new_entries.extend(file_items);
                 }
                 Err(e) => {
                     eprintln!("Error processing file {:?}: {:?}", path, e);
                 }
-            }
+            };
         }
     }
 
@@ -88,6 +99,7 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
 
     for item in syntax.items {
         match item {
+            // --- top-level fn, enum, struct ---
             Item::Fn(func) => {
                 results.push((
                     path_str.clone(), 
@@ -109,6 +121,56 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
                     st.ident.to_string()
                 ));
             }
+
+            // --- impl SomeType { ... } ---
+            Item::Impl(item_impl) => {
+                // Extract the type name from `item_impl.self_ty` if possible
+                // e.g. impl SomeType { fn foo() {} }
+                let type_name = match &*item_impl.self_ty {
+                    Type::Path(type_path) => {
+                        // e.g. SomeType
+                        type_path.path.segments.last()
+                            .map(|seg| seg.ident.to_string())
+                            .unwrap_or_else(|| "UnknownType".to_string())
+                    }
+                    _ => "UnknownType".to_string(),
+                };
+
+                for impl_item in item_impl.items {
+                    match impl_item {
+                        // This captures `fn` inside an impl block
+                        ImplItem::Fn(method) => {
+                            results.push((
+                                path_str.clone(),
+                                "ImplFn".to_string(),
+                                // We can store "SomeType::method_name"
+                                format!("{}::{}", type_name, method.sig.ident),
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // --- trait SomeTrait { ... } ---
+            Item::Trait(item_trait) => {
+                let trait_name = item_trait.ident.to_string();
+                for trait_item in item_trait.items {
+                    match trait_item {
+                        TraitItem::Fn(method) => {
+                            results.push((
+                                path_str.clone(), 
+                                "TraitFn".to_string(),
+                                // We can store "SomeTrait::method_name"
+                                format!("{}::{}", trait_name, method.sig.ident),
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // Everything else is ignored for now
             _ => {}
         }
     }
