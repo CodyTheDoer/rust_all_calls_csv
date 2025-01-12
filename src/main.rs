@@ -5,41 +5,36 @@ use syn::{File, Item};
 use csv::Writer;
 
 fn main() {
-    println!("all_calls_csv CLI -> generating CSV of calls in local .rs files");
-    
-    let spreadsheet_dir = "./spreadsheets";
-    let spreadsheet_path = format!("{}/project_references.csv", spreadsheet_dir);
+    let spreadsheet_path = "./spreadsheets/project_references.csv";
+    fs::create_dir_all("./spreadsheets").expect("Failed to create spreadsheets directory");
 
-    // Ensure the directory exists
-    fs::create_dir_all(&spreadsheet_dir).expect("Failed to create spreadsheets directory");
-    
-    // Open CSV writer
-    let mut writer = Writer::from_path(&spreadsheet_path)
+    let mut writer = Writer::from_path(spreadsheet_path)
         .expect("Failed to open CSV writer");
     writer.write_record(&["File", "Item Type", "Name"])
         .expect("Failed to write CSV header");
 
     for entry in WalkDir::new(".")
+        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| {
-            // Exclude `target` and possibly other directories
-            !e.path().starts_with("./target")
+        .filter(|x| {
+            // Skip any entries in the `target` folder.
+            !x.path().components().any(|x| x.as_os_str() == "target")
         })
     {
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+
+        if path.extension().and_then(|f| f.to_str()) == Some("rs") {
+            println!("Processing .rs file: {}", path.display());
+
             if let Err(e) = process_file(path, &mut writer) {
                 eprintln!("Error processing file {:?}: {:?}", path, e);
             }
         }
     }
-    
-    writer.flush().expect("Failed to flush CSV writer");
+
+    writer.flush().unwrap();
     println!("Done! CSV file generated at: {}", spreadsheet_path);
-    
-    println!("cargo:rerun-if-changed=src");
-    println!("cargo:rerun-if-changed=build.rs");
 }
 
 fn process_file(path: &Path, writer: &mut Writer<std::fs::File>) -> Result<(), Box<dyn std::error::Error>> {
