@@ -5,6 +5,8 @@ use syn::{File, Item};
 use csv::Writer;
 
 fn main() {
+    println!("ALL_CALLS_CSV -> Running build.rs");
+
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let spreadsheet_dir = format!("{}/spreadsheets", out_dir);
     let spreadsheet_path = format!("{}/project_references.csv", spreadsheet_dir);
