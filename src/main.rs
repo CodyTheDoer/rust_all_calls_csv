@@ -84,7 +84,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // We want:
     //    - Primary sort: file (alphabetically)
     //    - Secondary sort: name (alphabetically)
-    // (We could also do a triple-level sort if you wish to sort by item_type as well.)
     let mut sorted_entries: Vec<_> = existing_entries.into_iter().collect();
 
     sorted_entries.sort_by(|(file_a, _ty_a, name_a), (file_b, _ty_b, name_b)| {
@@ -119,7 +118,6 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
 
     for item in syntax.items {
         match item {
-            // --- top-level fn, enum, struct ---
             Item::Fn(func) => {
                 results.push((
                     path_str.clone(), 
@@ -141,8 +139,6 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
                     st.ident.to_string()
                 ));
             }
-
-            // --- impl SomeType { ... } ---
             Item::Impl(item_impl) => {
                 // Extract the type name from `item_impl.self_ty` if possible
                 // e.g. impl SomeType { fn foo() {} }
@@ -171,8 +167,6 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
                     }
                 }
             }
-
-            // --- trait SomeTrait { ... } ---
             Item::Trait(item_trait) => {
                 let trait_name = item_trait.ident.to_string();
                 for trait_item in item_trait.items {
@@ -189,8 +183,6 @@ fn process_file(path: &Path) -> Result<Vec<(String, String, String)>, Box<dyn st
                     }
                 }
             }
-
-            // Everything else is ignored for now
             _ => {}
         }
     }
