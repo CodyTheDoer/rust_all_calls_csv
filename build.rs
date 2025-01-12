@@ -10,7 +10,8 @@ fn main() {
     let spreadsheet_path = format!("{}/project_references.csv", spreadsheet_dir);
 
     // Ensure the directory exists
-    fs::create_dir_all(&spreadsheet_dir).unwrap();
+
+    fs::create_dir_all(&spreadsheet_dir).expect("Failed to create spreadsheets directory");
 
     // Open CSV writer
     let mut writer = Writer::from_path(&spreadsheet_path).unwrap();
